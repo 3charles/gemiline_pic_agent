@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+line-bot-sdk
+google-genai
+pillow
+# LangChain 核心三劍客 (必須版本對齊)
+langchain
+langchain-community
+langchain-core
+langchain-google-genai
