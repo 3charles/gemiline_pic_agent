@@ -133,7 +133,7 @@ def analyze_image_with_text(image_path: str, user_text: str) -> str:
             return "錯誤：找不到該圖片檔案。"
         img_user = PIL.Image.open(image_path)
         response = genai_client.models.generate_content(
-            model="gemini-2.5-flash-lite", # "gemini-3.1-flash-lite-preview", "gemini-3-flash-preview", "gemini-2.5-flash-lite", "gemini-2.5-flash"
+            model="gemini-3-flash-preview", # "gemini-3.1-flash-lite", "gemini-3-flash-preview", "gemini-2.5-flash-lite", "gemini-2.5-flash"
             contents=[img_user, user_text]
         )
         return response.text if response.text else "Gemini 沒答案！"
@@ -151,7 +151,7 @@ system_prompt = """
 """
 
 agent_executor = create_agent(
-    model="google_genai:gemini-2.5-flash",
+    model="google_genai:gemini-3.1-flash-lite",
     tools=tools,
     system_prompt=system_prompt,
 )
