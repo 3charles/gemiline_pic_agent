@@ -1,10 +1,10 @@
 fastapi
 uvicorn
 line-bot-sdk
-google-genai
+google-genai==2.12.1
 pillow
 # LangChain 核心三劍客 (必須版本對齊)
-langchain
-langchain-community
-langchain-core
-langchain-google-genai
+langchain==1.3.14
+langchain-community==0.4.12
+langchain-core==1.4.9
+langchain-google-genai==4.2.7
