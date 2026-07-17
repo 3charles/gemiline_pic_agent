@@ -7,4 +7,4 @@ pillow
 langchain==1.0.0a1
 langchain-community==0.4.2
 langchain-core
-langchain-google-genai==4.2.7
+langchain-google-genai
