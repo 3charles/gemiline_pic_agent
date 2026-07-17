@@ -6,5 +6,5 @@ pillow
 # LangChain 核心三劍客 (必須版本對齊)
 langchain==1.0.0a1
 langchain-community==0.4.2
-langchain-core==1.4.9
+langchain-core
 langchain-google-genai==4.2.7
