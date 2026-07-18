@@ -150,8 +150,11 @@ system_prompt = """
 【重要指示】：如果使用者只是單純打招呼、閒聊或沒有提供明確的圖片需求，請直接用文字友善回覆，絕對不要呼叫任何工具。
 """
 
+# 明確指定使用 google_genai，徹底封鎖 Render 誤判成 Vertex AI 的可能
+llm = init_chat_model("gemini-2.5-flash-lite", model_provider="google_genai")
+
 agent_executor = create_agent(
-    model="gemini-2.5-flash-lite",
+    model=llm, # 將實例化後的模型傳入
     tools=tools,
     system_prompt=system_prompt,
 )
