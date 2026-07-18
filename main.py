@@ -20,7 +20,10 @@ from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage, ImageSendMessage, ImageMessage,
 )
 
+# ======= 修正這裡：加入 init_chat_model 的引入 =======
 from langchain.agents import create_agent
+from langchain.chat_models import init_chat_model
+# ===================================================
 
 # ==========================
 #  環境設定與工具函式
