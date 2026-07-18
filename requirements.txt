@@ -4,7 +4,7 @@ line-bot-sdk
 google-genai
 pillow
 # LangChain 核心三劍客 (必須版本對齊)
-langchain==1.0.0a1
+langchain
 langchain-community
 langchain-core
 langchain-google-genai
