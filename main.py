@@ -31,7 +31,7 @@ from langchain.chat_models import init_chat_model
 google_api = os.environ.get("GOOGLE_API_KEY")
 genai_client = genai.Client(api_key=google_api)
 
-pixazo_api = os.environ.get("PIXAZO_API_KEY")
+agnes_api_key = os.environ.get("AGNES_API_KEY")
 
 line_bot_api = LineBotApi(os.environ.get("CHANNEL_ACCESS_TOKEN"))
 line_handler = WebhookHandler(os.environ.get("CHANNEL_SECRET"))
@@ -71,62 +71,75 @@ def get_previous_message(user_id):
         return user_message_history[user_id][-1]
     return {"type": "text", "content": "No message!"}
 
-# ==========================
-#  LangChain 工具定義
-# ==========================
+==========================
+ LangChain 工具定義
+==========================
 
 def generate_and_upload_image(prompt: str) -> str:
     """根據文字提示生成圖片。"""
     
-    # Free api - pixazo.ai/getImage/v1/getSDXLImage
+    # Agnes AI Image Generation API
     try:
         # --- 1. 設定 API 請求參數 ---
-        url = "https://gateway.pixazo.ai/getImage/v1/getSDXLImage"
+        url = "https://apihub.agnes-ai.com/v1/images/generations"
         headers = {
             "Content-Type": "application/json",
-            "Cache-Control": "no-cache",
-            "Ocp-Apim-Subscription-Key": pixazo_api  # 填入你的 API 金鑰
+            "Authorization": f"Bearer {agnes_api_key}"  # 使用 Bearer Token 驗證
         }
-        # 定義生成圖片的詳細設定
+        
+        # 依據 Agnes AI API 要求的 JSON 格式
         data = {
+            "model": "agnes-image-2.1-flash",
             "prompt": prompt,
-            "negative_prompt": "Low-quality, blurry image, with any other birds or animals. Avoid abstract or cartoonish styles, dark or gloomy atmosphere, unnecessary objects or distractions in the background, harsh lighting, and unnatural colors.",
-            "height": 1024,
-            "width": 1024,
-            "num_steps": 20,      # 步數越高通常細節越多，但也越耗時
-            "guidance_scale": 5,  # 數值越高，圖片越貼近提示詞
-            "seed": 40            # 固定種子碼可確保相同提示詞生成相同圖片
+            "size": "1024x768",  # 可依需求調整，例如 "1024x768" 或 "1024x1024"
+            "extra_body": {
+                "response_format": "url"
+            }
         }
-        # --- 2. 發送請求至 Pixazo API ---
+        
+        # --- 2. 發送請求至 Agnes AI API ---
         response = requests.post(url, json=data, headers=headers)
-        print(response.json())  # 在控制台查看原始回應數據內容
-        # 解析 JSON 回應
+        
+        # 檢查 HTTP 狀態碼
+        if response.status_code != 200:
+            return f"API 請求失敗 (Status {response.status_code}): {response.text}"
+            
         resp_data = response.json()
-        image_url = resp_data.get("imageUrl") # 從回應中取得圖片的外部連結
+        print(resp_data)  # 在控制台查看回應數據
+        
+        # --- 3. 解析 JSON 回應並取得圖片 URL ---
+        # 回應格式為 {"data": [{"url": "https://..."}]}
+        data_list = resp_data.get("data", [])
+        if data_list and len(data_list) > 0:
+            image_url = data_list[0].get("url")
+        else:
+            image_url = None
+
         if image_url:
-            # --- 3. 下載生成的圖片 ---
-            # 因為 API 只給 URL，我們需要再發送一次 GET 請求把圖片存下來
+            # --- 4. 下載生成的圖片 ---
             image_download_response = requests.get(image_url)
             if image_download_response.status_code == 200:
-                # 取得圖片的二進位數據 (Binary data)
                 image_binary = image_download_response.content
-                # --- 4. 處理並儲存圖片 ---
-                # 使用 PIL 打開二進位數據並轉為圖片格式
-                image = PIL.Image.open(io.BytesIO(image_binary))
-                # 產生一個隨機的檔名（避免重複），存放在 static 資料夾下
+                
+                # --- 5. 處理並儲存圖片 ---
+                image = Image.open(io.BytesIO(image_binary))
+                
+                # 確保 static 資料夾存在
+                os.makedirs("static", exist_ok=True)
+                
                 file_name = f"static/{os.urandom(8).hex()}.png"
                 image.save(file_name, format="PNG")
-                # --- 5. 回傳圖片連結 ---
-                # 取得目前的伺服器基礎位址 (例如 Hugging Face Space 或本地端)
+                
+                # --- 6. 回傳本地伺服器圖片連結 ---
                 base_url = os.getenv("HF_SPACE", "http://localhost:7860").rstrip("/")
                 return f"{base_url}/{file_name}"
             else:
-                return "從 URL 下載圖片失敗。"
+                return f"從 URL 下載圖片失敗，HTTP 狀態碼: {image_download_response.status_code}"
         else:
-            # 如果 JSON 裡沒拿到 imageUrl，回傳 API 給出的錯誤訊息
-            return f"圖片生成失敗: {resp_data.get('message', 'API 未回傳 URL')}"
+            return f"圖片生成失敗: 回應中未找到圖片 URL ({resp_data})"
+
     except Exception as e:
-        # 捕捉任何執行過程中的異常（如網路中斷、記憶體錯誤等）
+        # 捕捉執行過程中的異常
         return f"程式執行出錯: {e}"
 
 def analyze_image_with_text(image_path: str, user_text: str) -> str:
