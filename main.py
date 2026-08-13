@@ -71,9 +71,9 @@ def get_previous_message(user_id):
         return user_message_history[user_id][-1]
     return {"type": "text", "content": "No message!"}
 
-==========================
- LangChain 工具定義
-==========================
+# ==========================
+#  LangChain 工具定義
+# ==========================
 
 def generate_and_upload_image(prompt: str) -> str:
     """根據文字提示生成圖片。"""
