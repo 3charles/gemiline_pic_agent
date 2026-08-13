@@ -75,20 +75,25 @@ def get_previous_message(user_id):
 #  LangChain 工具定義
 # ==========================
 
-def generate_and_upload_image(prompt: str) -> str:
-    """根據文字提示生成圖片並儲存至本地。"""
+def generate_and_upload_image(prompt: str, api_key: str = None) -> str:
+    """根據文字提示生成圖片並儲存至本地 static 資料夾。"""
     
+    # 優先使用傳入的 api_key，若無則使用全域/環境變數設定
+    key = agnes_api_key
+    if not key or key == "YOUR_API_KEY":
+        return "錯誤：未提供有效的 API 金鑰。"
+
     url = "https://apihub.agnes-ai.com/v1/images/generations"
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {agnes_api_key}"
+        "Authorization": f"Bearer {key}"
     }
     
     # 依據官方文件規範設定 Payload
     data = {
         "model": "agnes-image-2.1-flash",
         "prompt": prompt,
-        "size": "1K",         # 推薦使用檔位：1K, 2K, 3K, 4K
+        "size": "1K",         # 推薦檔位：1K, 2K, 3K, 4K
         "ratio": "1:1",       # 支援 1:1, 16:9, 9:16, 4:3, 3:4 等
         "extra_body": {
             "response_format": "url"  # 必須放在 extra_body 內
@@ -96,7 +101,7 @@ def generate_and_upload_image(prompt: str) -> str:
     }
     
     try:
-        # 1. 發送請求至 Agnes AI API (設定 timeout=120 避免長時等待)
+        # 1. 發送請求至 Agnes AI API (設定 timeout=120)
         response = requests.post(url, json=data, headers=headers, timeout=120)
         
         # 檢查 HTTP 狀態碼
@@ -117,19 +122,16 @@ def generate_and_upload_image(prompt: str) -> str:
         if image_download_response.status_code != 200:
             return f"從 URL 下載圖片失敗 [HTTP {image_download_response.status_code}]"
             
-        # 4. 處理並儲存圖片
-        image_binary = image_download_response.content
-        image = Image.open(io.BytesIO(image_binary))
-        
-        # 確保 static 資料夾存在
+        # 4. 確保 static 資料夾存在，並直接儲存二進位圖片檔
         os.makedirs("static", exist_ok=True)
+        file_path = f"static/{os.urandom(8).hex()}.png"
         
-        file_name = f"static/{os.urandom(8).hex()}.png"
-        image.save(file_name, format="PNG")
+        with open(file_path, "wb") as f:
+            f.write(image_download_response.content)
         
-        # 5. 回傳圖片本地/伺服器 URL
+        # 5. 回傳圖片 URL
         base_url = os.getenv("HF_SPACE", "http://localhost:7860").rstrip("/")
-        return f"{base_url}/{file_name}"
+        return f"{base_url}/{file_path}"
 
     except requests.exceptions.Timeout:
         return "錯誤：請求逾時，圖片生成時間過長。"
