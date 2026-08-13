@@ -76,70 +76,66 @@ def get_previous_message(user_id):
 # ==========================
 
 def generate_and_upload_image(prompt: str) -> str:
-    """根據文字提示生成圖片。"""
+    """根據文字提示生成圖片並儲存至本地。"""
     
-    # Agnes AI Image Generation API
+    url = "https://apihub.agnes-ai.com/v1/images/generations"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {agnes_api_key}"
+    }
+    
+    # 依據官方文件規範設定 Payload
+    data = {
+        "model": "agnes-image-2.1-flash",
+        "prompt": prompt,
+        "size": "1K",         # 推薦使用檔位：1K, 2K, 3K, 4K
+        "ratio": "1:1",       # 支援 1:1, 16:9, 9:16, 4:3, 3:4 等
+        "extra_body": {
+            "response_format": "url"  # 必須放在 extra_body 內
+        }
+    }
+    
     try:
-        # --- 1. 設定 API 請求參數 ---
-        url = "https://apihub.agnes-ai.com/v1/images/generations"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {agnes_api_key}"  # 使用 Bearer Token 驗證
-        }
-        
-        # 依據 Agnes AI API 要求的 JSON 格式
-        data = {
-            "model": "agnes-image-2.1-flash",
-            "prompt": prompt,
-            "size": "1024x768",  # 可依需求調整，例如 "1024x768" 或 "1024x1024"
-            "extra_body": {
-                "response_format": "url"
-            }
-        }
-        
-        # --- 2. 發送請求至 Agnes AI API ---
-        response = requests.post(url, json=data, headers=headers)
+        # 1. 發送請求至 Agnes AI API (設定 timeout=120 避免長時等待)
+        response = requests.post(url, json=data, headers=headers, timeout=120)
         
         # 檢查 HTTP 狀態碼
         if response.status_code != 200:
-            return f"API 請求失敗 (Status {response.status_code}): {response.text}"
-            
-        resp_data = response.json()
-        print(resp_data)  # 在控制台查看回應數據
+            return f"API 請求失敗 [HTTP {response.status_code}]: {response.text}"
         
-        # --- 3. 解析 JSON 回應並取得圖片 URL ---
-        # 回應格式為 {"data": [{"url": "https://..."}]}
+        resp_data = response.json()
+        
+        # 2. 解析 JSON 回應 (路徑: data[0].url)
         data_list = resp_data.get("data", [])
-        if data_list and len(data_list) > 0:
-            image_url = data_list[0].get("url")
-        else:
-            image_url = None
+        if not data_list or not data_list[0].get("url"):
+            return f"圖片生成失敗：回應中未包含圖片 URL ({resp_data})"
+            
+        image_url = data_list[0]["url"]
+        
+        # 3. 下載生成的圖片
+        image_download_response = requests.get(image_url, timeout=30)
+        if image_download_response.status_code != 200:
+            return f"從 URL 下載圖片失敗 [HTTP {image_download_response.status_code}]"
+            
+        # 4. 處理並儲存圖片
+        image_binary = image_download_response.content
+        image = Image.open(io.BytesIO(image_binary))
+        
+        # 確保 static 資料夾存在
+        os.makedirs("static", exist_ok=True)
+        
+        file_name = f"static/{os.urandom(8).hex()}.png"
+        image.save(file_name, format="PNG")
+        
+        # 5. 回傳圖片本地/伺服器 URL
+        base_url = os.getenv("HF_SPACE", "http://localhost:7860").rstrip("/")
+        return f"{base_url}/{file_name}"
 
-        if image_url:
-            # --- 4. 下載生成的圖片 ---
-            image_download_response = requests.get(image_url)
-            if image_download_response.status_code == 200:
-                image_binary = image_download_response.content
-                
-                # --- 5. 處理並儲存圖片 ---
-                image = Image.open(io.BytesIO(image_binary))
-                
-                # 確保 static 資料夾存在
-                os.makedirs("static", exist_ok=True)
-                
-                file_name = f"static/{os.urandom(8).hex()}.png"
-                image.save(file_name, format="PNG")
-                
-                # --- 6. 回傳本地伺服器圖片連結 ---
-                base_url = os.getenv("HF_SPACE", "http://localhost:7860").rstrip("/")
-                return f"{base_url}/{file_name}"
-            else:
-                return f"從 URL 下載圖片失敗，HTTP 狀態碼: {image_download_response.status_code}"
-        else:
-            return f"圖片生成失敗: 回應中未找到圖片 URL ({resp_data})"
-
+    except requests.exceptions.Timeout:
+        return "錯誤：請求逾時，圖片生成時間過長。"
+    except requests.exceptions.RequestException as e:
+        return f"網路請求異常: {e}"
     except Exception as e:
-        # 捕捉執行過程中的異常
         return f"程式執行出錯: {e}"
 
 def analyze_image_with_text(image_path: str, user_text: str) -> str:
