@@ -171,7 +171,7 @@ system_prompt = """
 """
 
 # 明確指定使用 google_genai，徹底封鎖 Render 誤判成 Vertex AI 的可能
-llm = init_chat_model("gemini-3.1-flash-lite", model_provider="google_genai")
+llm = init_chat_model("gemini-3-flash-preview", model_provider="google_genai")
 
 agent_executor = create_agent(
     model=llm, # 將實例化後的模型傳入
