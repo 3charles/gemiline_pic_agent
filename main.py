@@ -36,9 +36,9 @@ line_bot_api = LineBotApi(os.environ.get("CHANNEL_ACCESS_TOKEN"))
 line_handler = WebhookHandler(os.environ.get("CHANNEL_SECRET"))
 
 genai_client = genai.Client(api_key=google_api)
-thinking_config = genai.types.ThinkingConfig(thinking_budget=800) # thinking_budget = 0,  turn off thinking mode
-generation_config = genai.types.GenerateContentConfig(max_output_tokens=300, temperature=0.2, top_p=0.5,
-                                                      thinking_config=thinking_config)
+# thinking_config = genai.types.ThinkingConfig(thinking_budget=0) # thinking_budget = 0,  turn off thinking mode
+generation_config = genai.types.GenerateContentConfig(max_output_tokens=300, temperature=0.2, top_p=0.5)
+
 user_message_history = defaultdict(list)
 app = FastAPI()
 
