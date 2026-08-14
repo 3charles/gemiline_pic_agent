@@ -151,7 +151,7 @@ def analyze_image_with_text(image_path: str, user_text: str) -> str:
         img_user = PIL.Image.open(image_path)
 
         response = client.models.generate_content(
-                        model="gemini-3.5-flash", # "gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-flash"
+                        model="gemini-3.5-flash-lite",
                         contents=[sample_doc, prompt],
                         config=generation_config
         )
