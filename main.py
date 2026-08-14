@@ -36,7 +36,7 @@ line_bot_api = LineBotApi(os.environ.get("CHANNEL_ACCESS_TOKEN"))
 line_handler = WebhookHandler(os.environ.get("CHANNEL_SECRET"))
 
 genai_client = genai.Client(api_key=google_api)
-thinking_config = genai.types.ThinkingConfig(thinking_budget=500) # thinking_budget = 0,  turn off thinking mode
+# thinking_config = genai.types.ThinkingConfig(thinking_budget=0) # thinking_budget = 0,  turn off thinking mode
 generation_config = genai.types.GenerateContentConfig(max_output_tokens=800, temperature=0.2, top_p=0.5)
 
 user_message_history = defaultdict(list)
@@ -149,10 +149,13 @@ def analyze_image_with_text(image_path: str, user_text: str) -> str:
         if not os.path.exists(image_path):
             return "錯誤：找不到該圖片檔案。"
         img_user = PIL.Image.open(image_path)
-        response = genai_client.models.generate_content(
+        chat = genai_client.chats.create(
             model="gemini-2.5-flash", # "gemini-3.1-flash-lite", "gemini-3-flash-preview", "gemini-2.5-flash-lite", "gemini-2.5-flash"
-            contents=[img_user, user_text],
             config=generation_config
+        )
+
+        response = chat.send_message(
+            message=[img_user, user_text]
         )
         return response.text if response.text else "Gemini 沒答案！"
     except Exception as e:
