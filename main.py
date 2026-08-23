@@ -151,7 +151,7 @@ def analyze_image_with_text(image_path: str, user_text: str) -> str:
         img_user = PIL.Image.open(image_path)
 
         response = genai_client.models.generate_content(
-                        model="gemini-2.5-flash", # gemini-3-flash-preview
+                        model="gemini-3.5-flash", # gemini-3.5-flash
                         contents=[img_user, user_text],
                         config=generation_config
         )
